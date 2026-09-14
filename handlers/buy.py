@@ -7,7 +7,7 @@ from aiogram.types import CallbackQuery, Message
 
 from config.prices import PACKS
 from config.settings import (
-    BOT_NAME, OWNER_ID, PAYMENTS_GROUP_ID, QR_IMAGE, TIMEZONE,
+    BOT_NAME, OWNER_ID, PAYMENTS_GROUP_ID, TIMEZONE,
 )
 import database.engine as db_engine
 from database.queries import (
@@ -109,21 +109,29 @@ async def cb_select_pack(call: CallbackQuery, bot: Bot) -> None:
 
     await call.answer()
 
-    # Enviar QR con botón de comprobante
-    if QR_IMAGE:
+    # Enviar QR con botón de comprobante — leer variable en tiempo de ejecución
+    import config.settings as cfg
+    qr = cfg.QR_IMAGE
+
+    if qr:
         try:
-            await call.message.answer_photo(
-                photo=QR_IMAGE,
+            await bot.send_photo(
+                chat_id=call.from_user.id,
+                photo=qr,
                 caption=text,
                 reply_markup=kb_send_voucher(payment_id),
                 parse_mode='HTML',
             )
             return
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Error enviando QR: {e}")
     # Fallback sin QR
-    await call.message.answer(
-        text, reply_markup=kb_send_voucher(payment_id), parse_mode='HTML'
+    await bot.send_message(
+        chat_id=call.from_user.id,
+        text=text,
+        reply_markup=kb_send_voucher(payment_id),
+        parse_mode='HTML',
     )
 
 
