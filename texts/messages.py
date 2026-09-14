@@ -245,3 +245,31 @@ def txt_user_info(user) -> str:
         f"🔰 Estado: {status}\n"
         f"📅 Registro: {user.created_at.strftime('%d/%m/%Y %H:%M')}"
     )
+
+
+def txt_group_completed(service_key: str, dato: str, username: str,
+                         tg_id: int, price: int,
+                         bal_before: int, bal_after: int,
+                         fecha: str, hora: str,
+                         result_data: str) -> str:
+    name     = SERVICE_NAMES.get(service_key, service_key.upper())
+    user_str = f"@{username}" if username else str(tg_id)
+    return (
+        f"✅ <b>SOLICITUD COMPLETADA</b>\n\n"
+        f"{name.split()[0]} <b>SERVICIO: {name.split(' ', 1)[1].upper()}</b>\n\n"
+        f"👤 USUARIO: {user_str}\n"
+        f"🆔 ID: <code>{tg_id}</code>\n\n"
+        f"📋 <b>DATOS DE LA SOLICITUD:</b>\n"
+        f"• Dato: <code>{dato}</code>\n"
+        f"• Servicio: Bloqueo {name.split(' ', 1)[1]}\n"
+        f"• Precio: <b>{price}</b> créditos\n"
+        f"• Saldo anterior: <b>{bal_before}</b>\n"
+        f"• Saldo actual: <b>{bal_after}</b>\n\n"
+        f"📅 FECHA: {fecha}\n"
+        f"🕐 HORA: {hora}\n\n"
+        f"📄 <b>DATOS DEL RESULTADO:</b>\n"
+        f"{result_data}\n\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"✅ <b>ESTADO: COMPLETADO</b>\n"
+        f"📨 Reporte enviado al cliente."
+    )

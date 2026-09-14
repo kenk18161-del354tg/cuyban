@@ -9,7 +9,7 @@ from database.queries import get_order, update_order_status
 from keyboards.builders import kb_empty
 from texts.messages import (
     txt_ask_result_data, txt_cancelled_client, txt_final_report,
-    txt_group_cancelled, txt_processing, txt_result_template,
+    txt_group_cancelled, txt_group_completed, txt_processing,
 )
 
 router = Router()
@@ -17,7 +17,7 @@ router = Router()
 # Estado temporal en memoria
 # order_id → info del pedido
 _pending_results: dict[int, dict] = {}
-# group_chat_id → order_id (esperando que el owner envíe los datos EN EL GRUPO)
+# group_chat_id → order_id
 _waiting_in_group: dict[int, int] = {}
 
 
@@ -43,19 +43,32 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
 
     await call.answer("✅ Confirmado. Iniciando proceso...")
 
-    # Quitar botones del mensaje del grupo
+    # Quitar botones del mensaje original de la solicitud
     await call.message.edit_reply_markup(reply_markup=kb_empty())
 
-    # El grupo donde llegó la solicitud
-    group_chat_id = call.message.chat.id
+    group_chat_id      = call.message.chat.id
+    original_msg_id    = call.message.message_id  # mensaje "🔔 NUEVA SOLICITUD..."
 
-    # Guardar estado — esperar respuesta del owner EN ESTE GRUPO
+    # Enviar mensaje pidiendo los datos en el grupo
+    ask_msg = await bot.send_message(
+        chat_id=group_chat_id,
+        text=txt_ask_result_data(),
+        parse_mode='HTML',
+    )
+
+    # Guardar estado
     _pending_results[order_id] = {
-        'client_tg_id':  order.user_tg_id,
-        'client_msg_id': order.client_msg_id,
-        'service':       order.service,
-        'data':          order.data,
-        'group_chat_id': group_chat_id,
+        'client_tg_id':   order.user_tg_id,
+        'client_msg_id':  order.client_msg_id,
+        'service':        order.service,
+        'data':           order.data,
+        'price':          order.price,
+        'balance_before': order.balance_before,
+        'balance_after':  order.balance_after,
+        'group_chat_id':  group_chat_id,
+        'original_msg_id': original_msg_id,
+        'ask_msg_id':     ask_msg.message_id,
+        'username':       None,  # se llena al recibir la respuesta
     }
     _waiting_in_group[group_chat_id] = order_id
 
@@ -87,13 +100,6 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
 
     asyncio.create_task(animate())
 
-    # ── Pedir datos al owner EN EL GRUPO ─────────────────────────────────────
-    await bot.send_message(
-        chat_id=group_chat_id,
-        text=txt_ask_result_data(),
-        parse_mode='HTML',
-    )
-
 
 # ── Cancelar pedido ───────────────────────────────────────────────────────────
 
@@ -117,7 +123,7 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
 
     await call.answer("❌ Pedido cancelado.")
 
-    # Editar mensaje del grupo
+    # Editar mensaje original del grupo
     await call.message.edit_text(
         txt_group_cancelled(order.service, order.data),
         reply_markup=kb_empty(),
@@ -157,7 +163,7 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
 ))
 async def receive_result_data(message: Message, bot: Bot) -> None:
     group_chat_id = message.chat.id
-    order_id = _waiting_in_group.get(group_chat_id)
+    order_id      = _waiting_in_group.get(group_chat_id)
     if not order_id:
         return
 
@@ -173,13 +179,61 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
     _waiting_in_group.pop(group_chat_id, None)
     _pending_results.pop(order_id, None)
 
-    # Actualizar pedido en BD
+    # Obtener username del owner para el resumen
+    username = message.from_user.username
+
+    # Obtener fecha/hora del pedido desde BD
     async with db_engine.AsyncSessionLocal() as session:
+        order = await get_order(session, order_id)
         await update_order_status(
             session, order_id, 'COMPLETADO', result_data=result_text
         )
 
-    # Eliminar mensaje de progreso del cliente
+    fecha = order.created_at.strftime('%d/%m/%Y') if order else '—'
+    hora  = order.created_at.strftime('%H:%M')    if order else '—'
+
+    # 1. Eliminar mensaje "📋 INGRESAR DATOS DEL RESULTADO"
+    try:
+        await bot.delete_message(
+            chat_id=group_chat_id,
+            message_id=info['ask_msg_id'],
+        )
+    except Exception:
+        pass
+
+    # 2. Eliminar mensaje del owner con los datos enviados
+    try:
+        await bot.delete_message(
+            chat_id=group_chat_id,
+            message_id=message.message_id,
+        )
+    except Exception:
+        pass
+
+    # 3. Editar el mensaje original de la solicitud con el resumen completo
+    resumen = txt_group_completed(
+        service_key=info['service'],
+        dato=info['data'],
+        username=info.get('username') or username,
+        tg_id=info['client_tg_id'],
+        price=info['price'],
+        bal_before=info['balance_before'],
+        bal_after=info['balance_after'],
+        fecha=fecha,
+        hora=hora,
+        result_data=result_text,
+    )
+    try:
+        await bot.edit_message_text(
+            chat_id=group_chat_id,
+            message_id=info['original_msg_id'],
+            text=resumen,
+            parse_mode='HTML',
+        )
+    except Exception:
+        pass
+
+    # 4. Eliminar mensaje de progreso del cliente
     try:
         await bot.delete_message(
             chat_id=info['client_tg_id'],
@@ -188,7 +242,7 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
     except Exception:
         pass
 
-    # Enviar reporte final al cliente
+    # 5. Enviar reporte final al cliente
     try:
         await bot.send_message(
             chat_id=info['client_tg_id'],
@@ -197,10 +251,3 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
         )
     except Exception:
         pass
-
-    # Confirmar en el grupo
-    await message.reply(
-        f"✅ Reporte enviado al cliente.\n"
-        f"📋 Pedido <code>{order_id}</code> — <b>COMPLETADO</b>.",
-        parse_mode='HTML',
-    )
