@@ -66,6 +66,9 @@ class Payment(Base):
     # estados: PENDIENTE | APROBADO | RECHAZADO
     photo_file_id  = Column(String(256), nullable=True)   # file_id comprobante
     group_msg_id   = Column(BigInteger, nullable=True)    # msg en grupo PAGOS
+    qr_msg_id      = Column(BigInteger, nullable=True)    # msg QR al cliente
+    instructions_msg_id = Column(BigInteger, nullable=True)  # msg instrucciones
+    confirm_msg_id = Column(BigInteger, nullable=True)    # msg "comprobante recibido"
     created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     def __repr__(self):

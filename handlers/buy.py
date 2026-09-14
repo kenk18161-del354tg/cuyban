@@ -7,12 +7,12 @@ from aiogram.types import CallbackQuery, Message
 
 from config.prices import PACKS
 from config.settings import (
-    BOT_NAME, OWNER_ID, PAYMENTS_GROUP_ID, TIMEZONE,
+    OWNER_ID, PAYMENTS_GROUP_ID, TIMEZONE,
 )
 import database.engine as db_engine
 from database.queries import (
     create_payment, get_or_create_user, get_payment,
-    get_pending_payment_by_user, set_credits, update_payment,
+    set_credits, update_payment,
 )
 from keyboards.builders import kb_buy, kb_empty, kb_payment_review, kb_send_voucher
 from texts.messages import (
@@ -31,7 +31,7 @@ PACK_NAMES = {
     'pro':    '💎 PACK PRO',
 }
 
-# Estado temporal: user_tg_id → payment_id (esperando foto del comprobante)
+# Estado temporal: user_tg_id → payment_id (esperando foto)
 _waiting_voucher: dict[int, int] = {}
 
 
@@ -109,39 +109,46 @@ async def cb_select_pack(call: CallbackQuery, bot: Bot) -> None:
 
     await call.answer()
 
-    # Enviar QR con botón de comprobante — leer variable en tiempo de ejecución
+    # Leer QR en tiempo de ejecución
     import config.settings as cfg
     qr = cfg.QR_IMAGE
 
+    qr_msg = None
     if qr:
         try:
-            await bot.send_photo(
+            qr_msg = await bot.send_photo(
                 chat_id=call.from_user.id,
                 photo=qr,
                 caption=text,
                 reply_markup=kb_send_voucher(payment_id),
                 parse_mode='HTML',
             )
-            return
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Error enviando QR: {e}")
-    # Fallback sin QR
-    await bot.send_message(
-        chat_id=call.from_user.id,
-        text=text,
-        reply_markup=kb_send_voucher(payment_id),
-        parse_mode='HTML',
-    )
+
+    if not qr_msg:
+        qr_msg = await bot.send_message(
+            chat_id=call.from_user.id,
+            text=text,
+            reply_markup=kb_send_voucher(payment_id),
+            parse_mode='HTML',
+        )
+
+    # Guardar ID del mensaje QR en BD
+    async with db_engine.AsyncSessionLocal() as session:
+        await update_payment(
+            session, payment_id, status='PENDIENTE',
+            qr_msg_id=qr_msg.message_id,
+        )
 
 
 # ── Botón "Enviar comprobante" ────────────────────────────────────────────────
 
 @router.callback_query(lambda c: c.data and c.data.startswith('voucher_'))
-async def cb_voucher(call: CallbackQuery) -> None:
+async def cb_voucher(call: CallbackQuery, bot: Bot) -> None:
     payment_id = int(call.data.split('_')[1])
 
-    # Verificar que el pago pertenece a este usuario y sigue PENDIENTE
     async with db_engine.AsyncSessionLocal() as session:
         payment = await get_payment(session, payment_id)
 
@@ -152,11 +159,22 @@ async def cb_voucher(call: CallbackQuery) -> None:
         await call.answer("⚠️ Este pago ya fue procesado.", show_alert=True)
         return
 
-    # Registrar que este usuario está esperando enviar foto
     _waiting_voucher[call.from_user.id] = payment_id
 
     await call.answer()
-    await call.message.answer(txt_send_voucher(), parse_mode='HTML')
+
+    # Enviar instrucciones y guardar su ID
+    instr_msg = await bot.send_message(
+        chat_id=call.from_user.id,
+        text=txt_send_voucher(),
+        parse_mode='HTML',
+    )
+
+    async with db_engine.AsyncSessionLocal() as session:
+        await update_payment(
+            session, payment_id, status='PENDIENTE',
+            instructions_msg_id=instr_msg.message_id,
+        )
 
 
 # ── Recibir foto del comprobante ──────────────────────────────────────────────
@@ -180,15 +198,12 @@ async def receive_voucher(message: Message, bot: Bot) -> None:
         if not payment or payment.status != 'PENDIENTE':
             return
 
-        # Zona horaria
         tz    = pytz.timezone(TIMEZONE)
         now   = datetime.now(tz)
         fecha = now.strftime('%d/%m/%Y')
         hora  = now.strftime('%H:%M')
-
         pack_name = PACK_NAMES.get(payment.pack, payment.pack.upper())
 
-        # Texto para el grupo PAGOS
         group_text = txt_payment_group(
             username=message.from_user.username,
             tg_id=user_tg_id,
@@ -201,8 +216,7 @@ async def receive_voucher(message: Message, bot: Bot) -> None:
             hora=hora,
         )
 
-        # Enviar al grupo PAGOS
-        target = PAYMENTS_GROUP_ID or OWNER_ID
+        target    = PAYMENTS_GROUP_ID or OWNER_ID
         group_msg = await bot.send_photo(
             chat_id=target,
             photo=photo_file_id,
@@ -211,16 +225,17 @@ async def receive_voucher(message: Message, bot: Bot) -> None:
             parse_mode='HTML',
         )
 
-        # Guardar file_id y msg_id del grupo
+        # Enviar confirmación al cliente y guardar su ID
+        confirm_msg = await message.answer(txt_voucher_received(), parse_mode='HTML')
+
+        # Guardar todos los IDs en BD
         await update_payment(
             session, payment_id,
             status='PENDIENTE',
             photo_file_id=photo_file_id,
             group_msg_id=group_msg.message_id,
+            confirm_msg_id=confirm_msg.message_id,
         )
-
-    # Confirmar al cliente
-    await message.answer(txt_voucher_received(), parse_mode='HTML')
 
 
 # ── Aprobar pago ──────────────────────────────────────────────────────────────
@@ -242,11 +257,16 @@ async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
             await call.answer("⚠️ Este pago ya fue procesado.", show_alert=True)
             return
 
-        total = payment.credits + payment.bonus
+        total     = payment.credits + payment.bonus
         pack_name = PACK_NAMES.get(payment.pack, payment.pack.upper())
 
-        # Agregar créditos al usuario
-        await set_credits(session, payment.user_tg_id, total)
+        # Guardar IDs antes de cerrar sesión
+        client_id           = payment.user_tg_id
+        qr_msg_id           = payment.qr_msg_id
+        instructions_msg_id = payment.instructions_msg_id
+        confirm_msg_id      = payment.confirm_msg_id
+
+        await set_credits(session, client_id, total)
         await update_payment(session, payment_id, status='APROBADO')
 
     await call.answer("✅ Pago aprobado.")
@@ -261,10 +281,18 @@ async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
     except Exception:
         pass
 
-    # Notificar al cliente
+    # Eliminar todos los mensajes del flujo de compra del cliente
+    for msg_id in [qr_msg_id, instructions_msg_id, confirm_msg_id]:
+        if msg_id:
+            try:
+                await bot.delete_message(chat_id=client_id, message_id=msg_id)
+            except Exception:
+                pass
+
+    # Enviar solo el mensaje de PAGO APROBADO con detalle
     try:
         await bot.send_message(
-            chat_id=payment.user_tg_id,
+            chat_id=client_id,
             text=txt_payment_approved(payment.credits, payment.bonus, pack_name),
             parse_mode='HTML',
         )
@@ -290,6 +318,8 @@ async def cb_reject_payment(call: CallbackQuery, bot: Bot) -> None:
         if payment.status != 'PENDIENTE':
             await call.answer("⚠️ Este pago ya fue procesado.", show_alert=True)
             return
+
+        client_id = payment.user_tg_id
         await update_payment(session, payment_id, status='RECHAZADO')
 
     await call.answer("❌ Pago rechazado.")
@@ -307,7 +337,7 @@ async def cb_reject_payment(call: CallbackQuery, bot: Bot) -> None:
     # Notificar al cliente
     try:
         await bot.send_message(
-            chat_id=payment.user_tg_id,
+            chat_id=client_id,
             text=txt_payment_rejected(),
             parse_mode='HTML',
         )

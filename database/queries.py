@@ -180,12 +180,18 @@ async def get_payment(session: AsyncSession, payment_id: int) -> Payment | None:
 async def update_payment(session: AsyncSession, payment_id: int,
                           status: str,
                           photo_file_id: str | None = None,
-                          group_msg_id: int | None = None) -> Payment | None:
+                          group_msg_id: int | None = None,
+                          qr_msg_id: int | None = None,
+                          instructions_msg_id: int | None = None,
+                          confirm_msg_id: int | None = None) -> Payment | None:
     payment = await get_payment(session, payment_id)
     if payment:
         payment.status = status
-        if photo_file_id is not None: payment.photo_file_id = photo_file_id
-        if group_msg_id  is not None: payment.group_msg_id  = group_msg_id
+        if photo_file_id         is not None: payment.photo_file_id         = photo_file_id
+        if group_msg_id          is not None: payment.group_msg_id          = group_msg_id
+        if qr_msg_id             is not None: payment.qr_msg_id             = qr_msg_id
+        if instructions_msg_id   is not None: payment.instructions_msg_id   = instructions_msg_id
+        if confirm_msg_id        is not None: payment.confirm_msg_id        = confirm_msg_id
         await session.commit()
     return payment
 

@@ -293,10 +293,11 @@ def txt_qr_payment(pack_name: str, credits: int, bonus: int, price: int) -> str:
 def txt_send_voucher() -> str:
     return (
         f"📸 <b>ENVÍO DE COMPROBANTE</b>\n\n"
-        f"Envía tu captura de pantalla o foto del comprobante de pago\n"
-        f"directamente en este chat.\n\n"
-        f"⏳ El pago será verificado y tus créditos\n"
-        f"serán agregados automáticamente."
+        f"Envía tu captura de pago <b>aquí en este chat</b> 👇\n\n"
+        f"📲 Solo sube la foto del comprobante\n"
+        f"directamente en esta conversación.\n\n"
+        f"⏳ Una vez recibida, verificaremos tu pago\n"
+        f"y tus créditos serán agregados automáticamente."
     )
 
 

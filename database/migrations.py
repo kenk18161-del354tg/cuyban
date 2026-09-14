@@ -43,6 +43,9 @@ async def run_migrations(conn: AsyncConnection) -> None:
                 status        VARCHAR(16) NOT NULL DEFAULT 'PENDIENTE',
                 photo_file_id VARCHAR(256),
                 group_msg_id  BIGINT,
+                qr_msg_id     BIGINT,
+                instructions_msg_id BIGINT,
+                confirm_msg_id BIGINT,
                 created_at    TIMESTAMP DEFAULT NOW()
             )
         """))
