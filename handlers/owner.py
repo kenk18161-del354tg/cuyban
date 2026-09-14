@@ -383,3 +383,23 @@ async def cmd_guia(message: Message) -> None:
         "/rechazar [id] [motivo] — Rechazar pedido"
     )
     await message.answer(text, parse_mode='HTML')
+
+
+# ── /idgr ─────────────────────────────────────────────────────────────────────
+
+@router.message(Command('idgr'))
+async def cmd_idgr(message: Message) -> None:
+    """Funciona en grupos y en privado. Devuelve el ID del chat actual."""
+    chat = message.chat
+    if chat.type == 'private':
+        await message.answer(
+            f"💬 <b>Chat privado</b>\n"
+            f"🆔 Tu ID: <code>{message.from_user.id}</code>",
+            parse_mode='HTML'
+        )
+    else:
+        await message.answer(
+            f"👥 <b>{chat.title}</b>\n"
+            f"🆔 ID del grupo: <code>{chat.id}</code>",
+            parse_mode='HTML'
+        )
