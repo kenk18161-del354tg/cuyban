@@ -477,3 +477,21 @@ async def cmd_anuncio(message: Message, bot: Bot) -> None:
         f"❌ Fallidos: <b>{fallidos}</b>",
         parse_mode='HTML'
     )
+
+
+# ── /resetdb ─────────────────────────────────────────────────────────────────
+
+@router.message(Command('resetdb'), owner_filter)
+async def cmd_resetdb(message: Message) -> None:
+    from sqlalchemy import text
+    async with db_engine.AsyncSessionLocal() as session:
+        await session.execute(text("DELETE FROM payments"))
+        await session.execute(text("DELETE FROM orders"))
+        await session.execute(text("DELETE FROM users"))
+        await session.commit()
+    await message.answer(
+        "✅ Base de datos limpiada.\n"
+        "Usuarios, pedidos y pagos eliminados.\n"
+        "El bot está como nuevo.",
+        parse_mode='HTML'
+    )
