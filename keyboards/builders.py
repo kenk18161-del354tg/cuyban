@@ -61,16 +61,16 @@ def kb_me() -> InlineKeyboardMarkup:
 
 # Grupo SOLICITANDES — botones confirmar/cancelar
 def kb_group_order(order_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
             text="✅ Bloqueo confirmado",
             callback_data=f"confirm_{order_id}"
-        ),
-        InlineKeyboardButton(
+        )],
+        [InlineKeyboardButton(
             text="❌ Cancelar pedido",
             callback_data=f"cancel_{order_id}"
-        ),
-    ]])
+        )],
+    ])
 
 
 # Mensaje del grupo después de confirmar (sin botones)
