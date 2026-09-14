@@ -4,7 +4,7 @@ from aiogram.types import Message
 
 from config.prices import PRICES, SERVICE_NAMES
 from config.settings import OWNER_ID
-from database.engine import AsyncSessionLocal
+import database.engine as db_engine
 from database.queries import (
     ban_user, get_all_users, get_order, get_pending_orders,
     get_stats, get_user, set_credits, update_order_status,
@@ -55,7 +55,7 @@ async def cmd_admin(message: Message) -> None:
 @router.message(Command('stats'))
 @owner_only
 async def cmd_stats(message: Message) -> None:
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         s = await get_stats(session)
     await message.answer(
         txt_stats(s['total_users'], s['total_orders'],
@@ -69,7 +69,7 @@ async def cmd_stats(message: Message) -> None:
 @router.message(Command('pedidos'))
 @owner_only
 async def cmd_pedidos(message: Message) -> None:
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         orders = await get_pending_orders(session)
 
     if not orders:
@@ -100,7 +100,7 @@ async def cmd_buscar(message: Message) -> None:
         await message.answer("⚠️ El ID debe ser numérico.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user = await get_user(session, tg_id)
 
     if not user:
@@ -125,7 +125,7 @@ async def cmd_ban(message: Message) -> None:
         await message.answer("⚠️ El ID debe ser numérico.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user = await ban_user(session, tg_id, banned=True)
 
     if not user:
@@ -150,7 +150,7 @@ async def cmd_unban(message: Message) -> None:
         await message.answer("⚠️ El ID debe ser numérico.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user = await ban_user(session, tg_id, banned=False)
 
     if not user:
@@ -176,7 +176,7 @@ async def cmd_addbal(message: Message) -> None:
         await message.answer("⚠️ ID y monto deben ser numéricos.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user = await set_credits(session, tg_id, amount)
 
     if not user:
@@ -206,7 +206,7 @@ async def cmd_delbal(message: Message) -> None:
         await message.answer("⚠️ ID y monto deben ser numéricos.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user = await set_credits(session, tg_id, -amount)
 
     if not user:
@@ -274,7 +274,7 @@ async def cmd_broadcast(message: Message, bot: Bot) -> None:
 
     texto = parts[1].strip()
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         users = await get_all_users(session)
 
     enviados  = 0
@@ -308,7 +308,7 @@ async def cmd_completar(message: Message, bot: Bot) -> None:
         await message.answer("⚠️ El ID debe ser numérico.")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         order = await get_order(session, order_id)
         if not order:
             await message.answer(f"❌ Pedido <code>{order_id}</code> no encontrado.", parse_mode='HTML')
@@ -346,7 +346,7 @@ async def cmd_rechazar(message: Message, bot: Bot) -> None:
 
     motivo = parts[2] if len(parts) > 2 else "Sin motivo especificado."
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         order = await get_order(session, order_id)
         if not order:
             await message.answer(f"❌ Pedido <code>{order_id}</code> no encontrado.", parse_mode='HTML')

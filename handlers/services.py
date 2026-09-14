@@ -10,7 +10,7 @@ from config.prices import PRICES, SERVICE_NAMES
 from config.settings import (
     GROUP_ID, LOG_CHANNEL_ID, NOTIFY_ON_ORDER, OWNER_ID, TIMEZONE,
 )
-from database.engine import AsyncSessionLocal
+import database.engine as db_engine
 from database.queries import (
     create_order, get_or_create_user, update_order_status,
 )
@@ -30,7 +30,7 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
     if await check_maintenance(message):
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user, _ = await get_or_create_user(
             session,
             tg_id=message.from_user.id,
@@ -113,7 +113,7 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
     )
 
     # Guardar IDs de mensajes en el pedido
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         await update_order_status(
             session,
             order_id=order.id,

@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from config.settings import OWNER_ID
-from database.engine import AsyncSessionLocal
+import database.engine as db_engine
 from database.queries import get_or_create_user, get_user_orders
 from keyboards.builders import kb_me
 from texts.messages import txt_me
@@ -17,7 +17,7 @@ async def cmd_me(message: Message) -> None:
     if await check_maintenance(message):
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user, _ = await get_or_create_user(
             session,
             tg_id=message.from_user.id,

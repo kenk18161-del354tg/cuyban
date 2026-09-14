@@ -4,7 +4,7 @@ from aiogram import Bot, Router
 from aiogram.types import CallbackQuery
 
 from config.settings import OWNER_ID
-from database.engine import AsyncSessionLocal
+import database.engine as db_engine
 from database.queries import get_order, update_order_status
 from keyboards.builders import kb_empty
 from texts.messages import (
@@ -31,7 +31,7 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
 
     order_id = int(call.data.split('_')[1])
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         order = await get_order(session, order_id)
         if not order:
             await call.answer("❌ Pedido no encontrado.", show_alert=True)
@@ -99,7 +99,7 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
 
     order_id = int(call.data.split('_')[1])
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         order = await get_order(session, order_id)
         if not order:
             await call.answer("❌ Pedido no encontrado.", show_alert=True)
@@ -163,7 +163,7 @@ async def receive_result_data(message, bot: Bot) -> None:
     _pending_results.pop(order_id, None)
 
     # Actualizar pedido en BD
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         await update_order_status(
             session, order_id, 'COMPLETADO', result_data=result_text
         )

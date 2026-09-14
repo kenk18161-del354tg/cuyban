@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
 from config.settings import OWNER_ID
-from database.engine import AsyncSessionLocal
+import database.engine as db_engine
 from database.queries import get_or_create_user
 from keyboards.builders import kb_cmds, kb_service_back, kb_start
 from texts.messages import txt_cmds, txt_service_detail, txt_service_detail_bloqueo, txt_start
@@ -19,7 +19,7 @@ async def cmd_start(message: Message) -> None:
     if await check_maintenance(message):
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user, created = await get_or_create_user(
             session,
             tg_id=message.from_user.id,
@@ -45,7 +45,7 @@ async def cmd_cmds(message: Message) -> None:
     if await check_maintenance(message):
         return
 
-    async with AsyncSessionLocal() as session:
+    async with db_engine.AsyncSessionLocal() as session:
         user, _ = await get_or_create_user(
             session,
             tg_id=message.from_user.id,
