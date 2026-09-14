@@ -409,7 +409,6 @@ async def cmd_idgr(message: Message) -> None:
 
 @router.message(Command('anuncio'), owner_filter)
 async def cmd_anuncio(message: Message, bot: Bot) -> None:
-    # El dueño debe responder al mensaje que quiere enviar
     if not message.reply_to_message:
         await message.answer(
             "⚠️ Responde al mensaje que quieres enviar como anuncio y escribe /anuncio.",
@@ -424,42 +423,57 @@ async def cmd_anuncio(message: Message, bot: Bot) -> None:
 
     enviados = 0
     fallidos = 0
+    anclados = 0
 
     for user in users:
         try:
+            # Enviar el mensaje
             if target_msg.photo:
-                await bot.send_photo(
+                sent = await bot.send_photo(
                     chat_id=user.tg_id,
                     photo=target_msg.photo[-1].file_id,
                     caption=target_msg.caption or '',
                     parse_mode='HTML',
                 )
             elif target_msg.video:
-                await bot.send_video(
+                sent = await bot.send_video(
                     chat_id=user.tg_id,
                     video=target_msg.video.file_id,
                     caption=target_msg.caption or '',
                     parse_mode='HTML',
                 )
             elif target_msg.text:
-                await bot.send_message(
+                sent = await bot.send_message(
                     chat_id=user.tg_id,
                     text=target_msg.text,
                     parse_mode='HTML',
                 )
             else:
-                await bot.forward_message(
+                sent = await bot.forward_message(
                     chat_id=user.tg_id,
                     from_chat_id=target_msg.chat.id,
                     message_id=target_msg.message_id,
                 )
             enviados += 1
+
+            # Anclar el mensaje enviado
+            try:
+                await bot.pin_chat_message(
+                    chat_id=user.tg_id,
+                    message_id=sent.message_id,
+                    disable_notification=True,
+                )
+                anclados += 1
+            except Exception:
+                pass
+
         except Exception:
             fallidos += 1
 
     await message.answer(
         f"📢 <b>Anuncio enviado.</b>\n\n"
         f"✅ Enviados: <b>{enviados}</b>\n"
+        f"📌 Anclados: <b>{anclados}</b>\n"
         f"❌ Fallidos: <b>{fallidos}</b>",
         parse_mode='HTML'
     )
