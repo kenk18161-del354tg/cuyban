@@ -93,11 +93,6 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
         text=txt_ask_result_data(),
         parse_mode='HTML',
     )
-    await bot.send_message(
-        chat_id=group_chat_id,
-        text=txt_result_template(),
-        parse_mode='HTML',
-    )
 
 
 # ── Cancelar pedido ───────────────────────────────────────────────────────────
