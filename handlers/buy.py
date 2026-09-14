@@ -1,7 +1,7 @@
 from datetime import datetime
 
 import pytz
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
@@ -57,7 +57,7 @@ async def cmd_buy(message: Message) -> None:
 
 
 # Callback desde /cmds
-@router.callback_query(lambda c: c.data == 'open_buy')
+@router.callback_query(F.data == 'open_buy')
 async def cb_open_buy(call: CallbackQuery) -> None:
     async with db_engine.AsyncSessionLocal() as session:
         user, _ = await get_or_create_user(
@@ -76,7 +76,7 @@ async def cb_open_buy(call: CallbackQuery) -> None:
 
 # ── Regresar a /buy desde el QR ──────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data == 'back_buy')
+@router.callback_query(F.data == 'back_buy')
 async def cb_back_buy(call: CallbackQuery, bot: Bot) -> None:
     async with db_engine.AsyncSessionLocal() as session:
         user, _ = await get_or_create_user(
@@ -97,7 +97,7 @@ async def cb_back_buy(call: CallbackQuery, bot: Bot) -> None:
 
 # ── Selección de paquete → mostrar QR ────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('pack_'))
+@router.callback_query(F.data.startswith('pack_'))
 async def cb_select_pack(call: CallbackQuery, bot: Bot) -> None:
     pack_key  = call.data.replace('pack_', '')
     pack      = PACKS.get(pack_key)
@@ -166,7 +166,7 @@ async def cb_select_pack(call: CallbackQuery, bot: Bot) -> None:
 
 # ── Botón "Enviar comprobante" ────────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('voucher_'))
+@router.callback_query(F.data.startswith('voucher_'))
 async def cb_voucher(call: CallbackQuery, bot: Bot) -> None:
     payment_id = int(call.data.split('_')[1])
 
@@ -261,7 +261,7 @@ async def receive_voucher(message: Message, bot: Bot) -> None:
 
 # ── Aprobar pago ──────────────────────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('pay_approve_'))
+@router.callback_query(F.data.startswith('pay_approve_'))
 async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
     if call.from_user.id != OWNER_ID:
         await call.answer("⛔ Solo el dueño puede aprobar.", show_alert=True)
@@ -323,7 +323,7 @@ async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
 
 # ── Rechazar pago ─────────────────────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('pay_reject_'))
+@router.callback_query(F.data.startswith('pay_reject_'))
 async def cb_reject_payment(call: CallbackQuery, bot: Bot) -> None:
     if call.from_user.id != OWNER_ID:
         await call.answer("⛔ Solo el dueño puede rechazar.", show_alert=True)

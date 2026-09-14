@@ -1,6 +1,6 @@
 import asyncio
 
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.types import CallbackQuery, Message
 
 from config.settings import OWNER_ID
@@ -19,7 +19,7 @@ router = Router()
 
 # ── Confirmar pedido ──────────────────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('confirm_'))
+@router.callback_query(F.data.startswith('confirm_'))
 async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
     if call.from_user.id != OWNER_ID:
         await call.answer("⛔ Solo el dueño puede confirmar.", show_alert=True)
@@ -94,7 +94,7 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
 
 # ── Cancelar pedido ───────────────────────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('cancel_'))
+@router.callback_query(F.data.startswith('cancel_'))
 async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
     if call.from_user.id != OWNER_ID:
         await call.answer("⛔ Solo el dueño puede cancelar.", show_alert=True)

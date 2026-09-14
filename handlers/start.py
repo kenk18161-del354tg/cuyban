@@ -1,4 +1,5 @@
 from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import CallbackQuery, Message
 
@@ -60,7 +61,7 @@ async def cmd_cmds(message: Message) -> None:
 
 # ── Callbacks del menú de servicios ──────────────────────────────────────────
 
-@router.callback_query(lambda c: c.data and c.data.startswith('svc_'))
+@router.callback_query(F.data.startswith('svc_'))
 async def cb_service_detail(call: CallbackQuery) -> None:
     key = call.data.replace('svc_', '')
     if key == 'bloqueo':
@@ -75,7 +76,7 @@ async def cb_service_detail(call: CallbackQuery) -> None:
     await call.answer()
 
 
-@router.callback_query(lambda c: c.data == 'back_cmds')
+@router.callback_query(F.data == 'back_cmds')
 async def cb_back_cmds(call: CallbackQuery) -> None:
     try:
         await call.message.edit_caption(caption=txt_cmds(), reply_markup=kb_cmds(), parse_mode='HTML')
