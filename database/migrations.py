@@ -53,4 +53,19 @@ async def run_migrations(conn: AsyncConnection) -> None:
     except Exception as e:
         logger.warning(f"Migración tabla payments: {e}")
 
+    # Columnas nuevas en payments (por si la tabla ya existía)
+    PAYMENTS_COLUMNS = [
+        ('qr_msg_id',           'BIGINT'),
+        ('instructions_msg_id', 'BIGINT'),
+        ('confirm_msg_id',      'BIGINT'),
+    ]
+    for col_name, col_type in PAYMENTS_COLUMNS:
+        try:
+            await conn.execute(text(
+                f"ALTER TABLE payments ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
+            ))
+            logger.info(f"Migración payments: columna '{col_name}' verificada.")
+        except Exception as e:
+            logger.warning(f"Migración payments '{col_name}': {e}")
+
     await conn.commit()
