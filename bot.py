@@ -39,7 +39,10 @@ async def main() -> None:
     dp.include_router(services.router)   # /bcp /agr /ibk /cjaq /bbva /sbk /yape /bloqueo
 
     logger.info("Bot arrancando con polling...")
-    await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    await dp.start_polling(
+        bot,
+        allowed_updates=["message", "callback_query", "chat_member"],
+    )
 
 
 if __name__ == '__main__':

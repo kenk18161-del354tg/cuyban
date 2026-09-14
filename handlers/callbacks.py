@@ -158,8 +158,10 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
 # ── Recibir datos del resultado — SOLO en el grupo de solicitudes ─────────────
 
 @router.message(lambda m: (
-    m.from_user and m.from_user.id == OWNER_ID
+    m.from_user is not None
+    and m.from_user.id == OWNER_ID
     and m.chat.id in _waiting_in_group
+    and m.chat.type in ('group', 'supergroup')
 ))
 async def receive_result_data(message: Message, bot: Bot) -> None:
     group_chat_id = message.chat.id
