@@ -131,3 +131,15 @@ async def get_stats(session: AsyncSession) -> dict:
         'cancelled':    cancelled,
         'pending':      pending,
     }
+
+
+async def get_processing_order_by_group(session: AsyncSession,
+                                         group_chat_id: int) -> Order | None:
+    """Devuelve el pedido en estado PROCESANDO para ese grupo."""
+    result = await session.execute(
+        select(Order)
+        .where(Order.status == 'PROCESANDO')
+        .where(Order.group_chat_id == group_chat_id)
+        .order_by(Order.updated_at.desc())
+    )
+    return result.scalar_one_or_none()

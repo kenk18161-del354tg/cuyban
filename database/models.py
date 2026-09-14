@@ -40,6 +40,9 @@ class Order(Base):
     result_data    = Column(Text, nullable=True)          # datos del resultado final
     group_msg_id   = Column(BigInteger, nullable=True)    # msg en SOLICITANDES
     client_msg_id  = Column(BigInteger, nullable=True)    # msg de progreso al cliente
+    group_chat_id  = Column(BigInteger, nullable=True)    # chat_id del grupo
+    original_msg_id = Column(BigInteger, nullable=True)   # msg original solicitud
+    ask_msg_id     = Column(BigInteger, nullable=True)    # msg pidiendo datos
     created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at     = Column(DateTime, default=datetime.utcnow,
                             onupdate=datetime.utcnow, nullable=False)
