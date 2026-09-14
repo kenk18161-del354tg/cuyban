@@ -263,7 +263,7 @@ async def cmd_broadcast(message: Message, bot: Bot) -> None:
     fallidos = 0
     for user in users:
         try:
-            await bot.send_message(user.tg_id, texto)
+            await bot.send_message(user.tg_id, texto, parse_mode='HTML')
             enviados += 1
         except Exception:
             fallidos += 1
@@ -488,6 +488,10 @@ async def cmd_resetdb(message: Message) -> None:
         await session.execute(text("DELETE FROM payments"))
         await session.execute(text("DELETE FROM orders"))
         await session.execute(text("DELETE FROM users"))
+        # Reiniciar secuencias de IDs
+        await session.execute(text("ALTER SEQUENCE payments_id_seq RESTART WITH 1"))
+        await session.execute(text("ALTER SEQUENCE orders_id_seq RESTART WITH 1"))
+        await session.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
         await session.commit()
     await message.answer(
         "✅ Base de datos limpiada.\n"

@@ -89,7 +89,8 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
             if pct < 100:
                 await asyncio.sleep(1.2)
 
-    asyncio.create_task(animate())
+    task = asyncio.create_task(animate())
+    task.add_done_callback(lambda t: t.exception() if not t.cancelled() else None)
 
 
 # ── Cancelar pedido ───────────────────────────────────────────────────────────
@@ -141,11 +142,7 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
 
 # ── Recibir datos del resultado — SOLO en el grupo, del owner ─────────────────
 
-@router.message(lambda m: (
-    m.from_user is not None
-    and m.from_user.id == OWNER_ID
-    and m.chat.type in ('group', 'supergroup')
-))
+@router.message(F.from_user.id == OWNER_ID, F.chat.type.in_({'group', 'supergroup'}))
 async def receive_result_data(message: Message, bot: Bot) -> None:
     group_chat_id = message.chat.id
 
