@@ -47,11 +47,37 @@ def kb_service_back() -> InlineKeyboardMarkup:
     ]])
 
 
-# /buy
+# /buy — selector de paquetes
 def kb_buy() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="💳 BÁSICO",  callback_data="pack_basico")],
+        [InlineKeyboardButton(text="⭐ PLUS",    callback_data="pack_plus")],
+        [InlineKeyboardButton(text="💎 PRO",     callback_data="pack_pro")],
+    ])
+
+
+# QR de pago — botón enviar comprobante
+def kb_send_voucher(payment_id: int) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(text="👑 Dueño", url=_owner_url())
+        InlineKeyboardButton(
+            text="📤 Enviar comprobante",
+            callback_data=f"voucher_{payment_id}"
+        )
     ]])
+
+
+# Grupo PAGOS — aprobar/rechazar en 1 columna
+def kb_payment_review(payment_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
+            text="✅ Aprobar pago",
+            callback_data=f"pay_approve_{payment_id}"
+        )],
+        [InlineKeyboardButton(
+            text="❌ Rechazar pago",
+            callback_data=f"pay_reject_{payment_id}"
+        )],
+    ])
 
 
 # /me

@@ -49,3 +49,24 @@ class Order(Base):
 
     def __repr__(self):
         return f'<Order id={self.id} service={self.service} status={self.status}>'
+
+
+class Payment(Base):
+    __tablename__ = 'payments'
+
+    id             = Column(Integer, primary_key=True, autoincrement=True)
+    user_tg_id     = Column(BigInteger, nullable=False, index=True)
+    username       = Column(String(64), nullable=True)
+    full_name      = Column(String(128), nullable=True)
+    pack           = Column(String(16), nullable=False)   # basico | plus | pro
+    credits        = Column(Integer, nullable=False)
+    bonus          = Column(Integer, nullable=False, default=0)
+    price_soles    = Column(Integer, nullable=False)
+    status         = Column(String(16), default='PENDIENTE', nullable=False)
+    # estados: PENDIENTE | APROBADO | RECHAZADO
+    photo_file_id  = Column(String(256), nullable=True)   # file_id comprobante
+    group_msg_id   = Column(BigInteger, nullable=True)    # msg en grupo PAGOS
+    created_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f'<Payment id={self.id} pack={self.pack} status={self.status}>'

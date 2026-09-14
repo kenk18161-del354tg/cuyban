@@ -143,3 +143,60 @@ async def get_processing_order_by_group(session: AsyncSession,
         .order_by(Order.updated_at.desc())
     )
     return result.scalar_one_or_none()
+
+
+# ── Pagos ─────────────────────────────────────────────────────────────────────
+
+from database.models import Payment
+
+
+async def create_payment(session: AsyncSession, user_tg_id: int,
+                          username: str | None, full_name: str | None,
+                          pack: str, credits: int, bonus: int,
+                          price_soles: int) -> Payment:
+    payment = Payment(
+        user_tg_id=user_tg_id,
+        username=username,
+        full_name=full_name,
+        pack=pack,
+        credits=credits,
+        bonus=bonus,
+        price_soles=price_soles,
+        status='PENDIENTE',
+    )
+    session.add(payment)
+    await session.commit()
+    await session.refresh(payment)
+    return payment
+
+
+async def get_payment(session: AsyncSession, payment_id: int) -> Payment | None:
+    result = await session.execute(
+        select(Payment).where(Payment.id == payment_id)
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_payment(session: AsyncSession, payment_id: int,
+                          status: str,
+                          photo_file_id: str | None = None,
+                          group_msg_id: int | None = None) -> Payment | None:
+    payment = await get_payment(session, payment_id)
+    if payment:
+        payment.status = status
+        if photo_file_id is not None: payment.photo_file_id = photo_file_id
+        if group_msg_id  is not None: payment.group_msg_id  = group_msg_id
+        await session.commit()
+    return payment
+
+
+async def get_pending_payment_by_user(session: AsyncSession,
+                                       user_tg_id: int) -> Payment | None:
+    """Devuelve el pago PENDIENTE más reciente del usuario."""
+    result = await session.execute(
+        select(Payment)
+        .where(Payment.user_tg_id == user_tg_id)
+        .where(Payment.status == 'PENDIENTE')
+        .order_by(Payment.created_at.desc())
+    )
+    return result.scalar_one_or_none()

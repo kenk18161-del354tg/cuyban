@@ -1,5 +1,5 @@
 """
-Script de migración: agrega columnas nuevas a la tabla orders si no existen.
+Script de migración: agrega columnas nuevas si no existen.
 Se ejecuta automáticamente al arrancar el bot.
 """
 import logging
@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 logger = logging.getLogger(__name__)
 
-# Columnas a agregar: (nombre, definición SQL)
-NEW_COLUMNS = [
+# Columnas nuevas en tabla orders
+ORDER_COLUMNS = [
     ('group_chat_id',    'BIGINT'),
     ('original_msg_id',  'BIGINT'),
     ('ask_msg_id',       'BIGINT'),
@@ -18,12 +18,36 @@ NEW_COLUMNS = [
 
 
 async def run_migrations(conn: AsyncConnection) -> None:
-    for col_name, col_type in NEW_COLUMNS:
+    # Tabla orders — columnas nuevas
+    for col_name, col_type in ORDER_COLUMNS:
         try:
             await conn.execute(text(
                 f"ALTER TABLE orders ADD COLUMN IF NOT EXISTS {col_name} {col_type}"
             ))
-            logger.info(f"Migración: columna '{col_name}' verificada/agregada.")
+            logger.info(f"Migración orders: columna '{col_name}' verificada.")
         except Exception as e:
-            logger.warning(f"Migración columna '{col_name}': {e}")
+            logger.warning(f"Migración orders '{col_name}': {e}")
+
+    # Tabla payments — crearla si no existe
+    try:
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS payments (
+                id            SERIAL PRIMARY KEY,
+                user_tg_id    BIGINT NOT NULL,
+                username      VARCHAR(64),
+                full_name     VARCHAR(128),
+                pack          VARCHAR(16) NOT NULL,
+                credits       INTEGER NOT NULL,
+                bonus         INTEGER NOT NULL DEFAULT 0,
+                price_soles   INTEGER NOT NULL,
+                status        VARCHAR(16) NOT NULL DEFAULT 'PENDIENTE',
+                photo_file_id VARCHAR(256),
+                group_msg_id  BIGINT,
+                created_at    TIMESTAMP DEFAULT NOW()
+            )
+        """))
+        logger.info("Migración: tabla 'payments' verificada.")
+    except Exception as e:
+        logger.warning(f"Migración tabla payments: {e}")
+
     await conn.commit()

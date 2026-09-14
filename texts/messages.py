@@ -273,3 +273,75 @@ def txt_group_completed(service_key: str, dato: str, username: str,
         f"✅ <b>ESTADO: COMPLETADO</b>\n"
         f"📨 Reporte enviado al cliente."
     )
+
+
+# ── Flujo de compra ───────────────────────────────────────────────────────────
+
+def txt_qr_payment(pack_name: str, credits: int, bonus: int, price: int) -> str:
+    total = credits + bonus
+    bonus_txt = f" + {bonus} GRATIS" if bonus else ""
+    return (
+        f"🎟️ <b>{pack_name}</b>\n\n"
+        f"💳 {credits} créditos{bonus_txt} = <b>{total} créditos</b>\n"
+        f"💰 Total a pagar: <b>S/ {price}</b>\n\n"
+        f"👇 <b>Escanea el QR y realiza tu pago</b>\n\n"
+        f"Una vez pagado, presiona el botón\n"
+        f"<b>📤 Enviar comprobante</b> para continuar."
+    )
+
+
+def txt_send_voucher() -> str:
+    return (
+        f"📸 <b>ENVÍO DE COMPROBANTE</b>\n\n"
+        f"Envía tu captura de pantalla o foto del comprobante de pago\n"
+        f"directamente en este chat.\n\n"
+        f"⏳ El pago será verificado y tus créditos\n"
+        f"serán agregados automáticamente."
+    )
+
+
+def txt_voucher_received() -> str:
+    return (
+        f"✅ <b>Comprobante recibido.</b>\n\n"
+        f"⏳ Estamos verificando tu pago...\n"
+        f"Te notificaremos cuando sea aprobado."
+    )
+
+
+def txt_payment_group(username: str, tg_id: int, full_name: str,
+                       pack_name: str, credits: int, bonus: int,
+                       price: int, fecha: str, hora: str) -> str:
+    user_str  = f"@{username}" if username else str(tg_id)
+    total     = credits + bonus
+    bonus_txt = f" + {bonus} GRATIS" if bonus else ""
+    return (
+        f"💳 <b>NUEVO COMPROBANTE DE PAGO</b>\n\n"
+        f"👤 Usuario: {user_str}\n"
+        f"🆔 ID: <code>{tg_id}</code>\n"
+        f"📛 Nombre: {full_name or '—'}\n\n"
+        f"📦 Paquete: <b>{pack_name}</b>\n"
+        f"💳 Créditos: <b>{credits}{bonus_txt} = {total} créditos</b>\n"
+        f"💰 Monto: <b>S/ {price}</b>\n\n"
+        f"📅 Fecha: {fecha}\n"
+        f"🕐 Hora: {hora}\n\n"
+        f"⏳ <b>ESTADO: PENDIENTE</b>"
+    )
+
+
+def txt_payment_approved(credits: int, bonus: int, pack_name: str) -> str:
+    total     = credits + bonus
+    bonus_txt = f" + {bonus} GRATIS" if bonus else ""
+    return (
+        f"✅ <b>PAGO APROBADO</b>\n\n"
+        f"📦 Paquete: <b>{pack_name}</b>\n"
+        f"💳 Se agregaron <b>{total}</b> créditos{bonus_txt} a tu cuenta.\n\n"
+        f"¡Gracias por tu compra! Ya puedes usar los servicios."
+    )
+
+
+def txt_payment_rejected() -> str:
+    return (
+        f"❌ <b>PAGO RECHAZADO</b>\n\n"
+        f"Tu comprobante no pudo ser verificado.\n\n"
+        f"Si crees que es un error, contáctate con el dueño."
+    )
