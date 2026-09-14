@@ -11,8 +11,8 @@ PRICES = {
 
 PACKS = {
     'basico': {'credits': 5,  'bonus': 0, 'price_soles': 25},
-    'plus':   {'credits': 10, 'bonus': 1, 'price_soles': 45},
-    'pro':    {'credits': 20, 'bonus': 2, 'price_soles': 85},
+    'plus':   {'credits': 10, 'bonus': 0, 'price_soles': 45},
+    'pro':    {'credits': 20, 'bonus': 0, 'price_soles': 85},
 }
 
 SERVICE_NAMES = {
