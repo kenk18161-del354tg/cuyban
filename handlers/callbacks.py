@@ -1,9 +1,9 @@
 import asyncio
 
 from aiogram import Bot, Router
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
-from config.settings import OWNER_ID
+from config.settings import GROUP_ID, OWNER_ID
 import database.engine as db_engine
 from database.queries import get_order, update_order_status
 from keyboards.builders import kb_empty
@@ -14,11 +14,11 @@ from texts.messages import (
 
 router = Router()
 
-# Estado temporal en memoria: order_id → chat_id del cliente
-# (para saber a quién enviarle el reporte final)
+# Estado temporal en memoria
+# order_id → info del pedido
 _pending_results: dict[int, dict] = {}
-# Clave: owner_tg_id → order_id (esperando que el owner envíe los datos)
-_waiting_owner: dict[int, int] = {}
+# group_chat_id → order_id (esperando que el owner envíe los datos EN EL GRUPO)
+_waiting_in_group: dict[int, int] = {}
 
 
 # ── Confirmar pedido ──────────────────────────────────────────────────────────
@@ -46,44 +46,55 @@ async def cb_confirm(call: CallbackQuery, bot: Bot) -> None:
     # Quitar botones del mensaje del grupo
     await call.message.edit_reply_markup(reply_markup=kb_empty())
 
-    # Guardar estado para el owner
+    # El grupo donde llegó la solicitud
+    group_chat_id = call.message.chat.id
+
+    # Guardar estado — esperar respuesta del owner EN ESTE GRUPO
     _pending_results[order_id] = {
-        'client_tg_id': order.user_tg_id,
+        'client_tg_id':  order.user_tg_id,
         'client_msg_id': order.client_msg_id,
-        'service': order.service,
-        'data': order.data,
+        'service':       order.service,
+        'data':          order.data,
+        'group_chat_id': group_chat_id,
     }
-    _waiting_owner[OWNER_ID] = order_id
+    _waiting_in_group[group_chat_id] = order_id
 
     # ── Animar progreso en el mensaje del cliente ─────────────────────────────
-    steps = [1, 25, 50, 75, 100]
     client_chat = order.user_tg_id
     client_msg  = order.client_msg_id
 
     async def animate():
-        for pct in steps:
+        for pct in [1, 25, 50, 75, 100]:
             try:
-                await bot.edit_message_text(
+                await bot.edit_message_caption(
                     chat_id=client_chat,
                     message_id=client_msg,
-                    text=txt_processing(pct),
+                    caption=txt_processing(pct),
                     parse_mode='HTML',
                 )
             except Exception:
-                pass
+                try:
+                    await bot.edit_message_text(
+                        chat_id=client_chat,
+                        message_id=client_msg,
+                        text=txt_processing(pct),
+                        parse_mode='HTML',
+                    )
+                except Exception:
+                    pass
             if pct < 100:
                 await asyncio.sleep(1.2)
 
     asyncio.create_task(animate())
 
-    # ── Pedir datos al owner ──────────────────────────────────────────────────
+    # ── Pedir datos al owner EN EL GRUPO ─────────────────────────────────────
     await bot.send_message(
-        chat_id=OWNER_ID,
+        chat_id=group_chat_id,
         text=txt_ask_result_data(),
         parse_mode='HTML',
     )
     await bot.send_message(
-        chat_id=OWNER_ID,
+        chat_id=group_chat_id,
         text=txt_result_template(),
         parse_mode='HTML',
     )
@@ -121,32 +132,37 @@ async def cb_cancel(call: CallbackQuery, bot: Bot) -> None:
     # Notificar al cliente
     try:
         if order.client_msg_id:
-            await bot.edit_message_text(
+            await bot.edit_message_caption(
                 chat_id=order.user_tg_id,
                 message_id=order.client_msg_id,
-                text=txt_cancelled_client(order.service, order.data),
+                caption=txt_cancelled_client(order.service, order.data),
                 parse_mode='HTML',
             )
-        else:
+    except Exception:
+        try:
             await bot.send_message(
                 order.user_tg_id,
                 txt_cancelled_client(order.service, order.data),
                 parse_mode='HTML',
             )
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-    # Limpiar estado si estaba esperando datos
+    # Limpiar estado
+    group_chat_id = call.message.chat.id
     _pending_results.pop(order_id, None)
-    _waiting_owner.pop(OWNER_ID, None)
+    _waiting_in_group.pop(group_chat_id, None)
 
 
-# ── Recibir datos del resultado (mensaje de texto del owner) ──────────────────
+# ── Recibir datos del resultado — SOLO en el grupo de solicitudes ─────────────
 
-@router.message(lambda m: m.from_user and m.from_user.id == OWNER_ID
-                and OWNER_ID in _waiting_owner)
-async def receive_result_data(message, bot: Bot) -> None:
-    order_id = _waiting_owner.get(OWNER_ID)
+@router.message(lambda m: (
+    m.from_user and m.from_user.id == OWNER_ID
+    and m.chat.id in _waiting_in_group
+))
+async def receive_result_data(message: Message, bot: Bot) -> None:
+    group_chat_id = message.chat.id
+    order_id = _waiting_in_group.get(group_chat_id)
     if not order_id:
         return
 
@@ -159,7 +175,7 @@ async def receive_result_data(message, bot: Bot) -> None:
         return
 
     # Limpiar estado
-    _waiting_owner.pop(OWNER_ID, None)
+    _waiting_in_group.pop(group_chat_id, None)
     _pending_results.pop(order_id, None)
 
     # Actualizar pedido en BD
@@ -168,7 +184,7 @@ async def receive_result_data(message, bot: Bot) -> None:
             session, order_id, 'COMPLETADO', result_data=result_text
         )
 
-    # Eliminar mensaje de progreso 100% del cliente
+    # Eliminar mensaje de progreso del cliente
     try:
         await bot.delete_message(
             chat_id=info['client_tg_id'],
@@ -187,9 +203,9 @@ async def receive_result_data(message, bot: Bot) -> None:
     except Exception:
         pass
 
-    # Confirmar al owner
-    await message.answer(
+    # Confirmar en el grupo
+    await message.reply(
         f"✅ Reporte enviado al cliente.\n"
-        f"📋 Pedido <code>{order_id}</code> marcado como <b>COMPLETADO</b>.",
+        f"📋 Pedido <code>{order_id}</code> — <b>COMPLETADO</b>.",
         parse_mode='HTML',
     )
