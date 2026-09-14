@@ -8,10 +8,9 @@ from database.queries import get_or_create_user
 from keyboards.builders import kb_cmds, kb_service_back, kb_start
 from texts.messages import txt_cmds, txt_service_detail, txt_service_detail_bloqueo, txt_start
 from utils.checks import check_banned, check_maintenance
+from utils.sender import send_with_image
 
 router = Router()
-
-BANK_KEYS = ['bcp', 'agr', 'ibk', 'cjaq', 'bbva', 'sbk', 'yape']
 
 
 @router.message(Command('start'))
@@ -37,7 +36,7 @@ async def cmd_start(message: Message) -> None:
         rank=rank,
         credits=user.credits,
     )
-    await message.answer(text, reply_markup=kb_start(), parse_mode='HTML')
+    await send_with_image(message, text, reply_markup=kb_start())
 
 
 @router.message(Command('cmds'))
@@ -56,7 +55,7 @@ async def cmd_cmds(message: Message) -> None:
     if await check_banned(message, user):
         return
 
-    await message.answer(txt_cmds(), reply_markup=kb_cmds(), parse_mode='HTML')
+    await send_with_image(message, txt_cmds(), reply_markup=kb_cmds())
 
 
 # ── Callbacks del menú de servicios ──────────────────────────────────────────
@@ -68,11 +67,18 @@ async def cb_service_detail(call: CallbackQuery) -> None:
         text = txt_service_detail_bloqueo()
     else:
         text = txt_service_detail(key)
-    await call.message.edit_text(text, reply_markup=kb_service_back(), parse_mode='HTML')
+    # Editar caption si tiene foto, o editar texto si no
+    try:
+        await call.message.edit_caption(caption=text, reply_markup=kb_service_back(), parse_mode='HTML')
+    except Exception:
+        await call.message.edit_text(text, reply_markup=kb_service_back(), parse_mode='HTML')
     await call.answer()
 
 
 @router.callback_query(lambda c: c.data == 'back_cmds')
 async def cb_back_cmds(call: CallbackQuery) -> None:
-    await call.message.edit_text(txt_cmds(), reply_markup=kb_cmds(), parse_mode='HTML')
+    try:
+        await call.message.edit_caption(caption=txt_cmds(), reply_markup=kb_cmds(), parse_mode='HTML')
+    except Exception:
+        await call.message.edit_text(txt_cmds(), reply_markup=kb_cmds(), parse_mode='HTML')
     await call.answer()

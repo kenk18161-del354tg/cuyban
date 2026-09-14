@@ -19,10 +19,11 @@ from texts.messages import (
     txt_group_notification, txt_no_credits, txt_request_received,
 )
 from utils.checks import check_banned, check_maintenance, check_membership
+from utils.sender import send_with_image
 
 router = Router()
 
-SERVICES = list(PRICES.keys())  # ['bcp', 'agr', 'ibk', 'cjaq', 'bbva', 'sbk', 'yape', 'bloqueo']
+SERVICES = list(PRICES.keys())
 
 
 async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
@@ -47,10 +48,10 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
         # Extraer el dato enviado
         parts = message.text.split(maxsplit=1)
         if len(parts) < 2 or not parts[1].strip():
-            await message.answer(
+            await send_with_image(
+                message,
                 f"⚠️ Debes enviar el dato.\n"
                 f"Ejemplo: <code>/{service_key} 123456789</code>",
-                parse_mode='HTML'
             )
             return
 
@@ -59,19 +60,17 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
 
         # Verificar saldo
         if user.credits < price:
-            await message.answer(
-                txt_no_credits(price, user.credits), parse_mode='HTML'
-            )
+            await send_with_image(message, txt_no_credits(price, user.credits))
             return
 
-        bal_before = user.credits
+        bal_before   = user.credits
         user.credits -= price
         await session.commit()
         bal_after = user.credits
 
         # Zona horaria
-        tz   = pytz.timezone(TIMEZONE)
-        now  = datetime.now(tz)
+        tz    = pytz.timezone(TIMEZONE)
+        now   = datetime.now(tz)
         fecha = now.strftime('%d/%m/%Y')
         hora  = now.strftime('%H:%M')
 
@@ -86,9 +85,9 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
             balance_after=bal_after,
         )
 
-    # Mensaje de confirmación al cliente
-    client_msg = await message.answer(
-        txt_request_received(service_key, dato), parse_mode='HTML'
+    # Mensaje de confirmación al cliente (con imagen)
+    client_msg = await send_with_image(
+        message, txt_request_received(service_key, dato)
     )
 
     # Notificación al grupo/owner
@@ -104,7 +103,7 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
         hora=hora,
     )
 
-    target = GROUP_ID or OWNER_ID
+    target    = GROUP_ID or OWNER_ID
     group_msg = await bot.send_message(
         chat_id=target,
         text=group_text,

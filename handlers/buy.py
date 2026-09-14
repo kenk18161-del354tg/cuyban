@@ -7,6 +7,7 @@ from database.queries import get_or_create_user
 from keyboards.builders import kb_buy
 from texts.messages import txt_buy
 from utils.checks import check_banned, check_maintenance
+from utils.sender import send_with_image
 
 router = Router()
 
@@ -27,7 +28,7 @@ async def cmd_buy(message: Message) -> None:
     if await check_banned(message, user):
         return
 
-    await message.answer(txt_buy(user.credits), reply_markup=kb_buy(), parse_mode='HTML')
+    await send_with_image(message, txt_buy(user.credits), reply_markup=kb_buy())
 
 
 # Callback desde el menú /cmds
@@ -40,7 +41,9 @@ async def cb_open_buy(call: CallbackQuery) -> None:
             username=call.from_user.username,
             full_name=call.from_user.full_name,
         )
-    await call.message.edit_text(
-        txt_buy(user.credits), reply_markup=kb_buy(), parse_mode='HTML'
-    )
+    text = txt_buy(user.credits)
+    try:
+        await call.message.edit_caption(caption=text, reply_markup=kb_buy(), parse_mode='HTML')
+    except Exception:
+        await call.message.edit_text(text, reply_markup=kb_buy(), parse_mode='HTML')
     await call.answer()

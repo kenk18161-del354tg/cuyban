@@ -8,6 +8,7 @@ from database.queries import get_or_create_user, get_user_orders
 from keyboards.builders import kb_me
 from texts.messages import txt_me
 from utils.checks import check_banned, check_maintenance
+from utils.sender import send_with_image
 
 router = Router()
 
@@ -29,7 +30,7 @@ async def cmd_me(message: Message) -> None:
     if await check_banned(message, user):
         return
 
-    total      = len(orders)
+    total       = len(orders)
     completadas = sum(1 for o in orders if o.status == 'COMPLETADO')
     canceladas  = sum(1 for o in orders if o.status == 'CANCELADO')
     rank        = 'OWNER' if message.from_user.id == OWNER_ID else 'USUARIO'
@@ -43,4 +44,4 @@ async def cmd_me(message: Message) -> None:
         completadas=completadas,
         canceladas=canceladas,
     )
-    await message.answer(text, reply_markup=kb_me(), parse_mode='HTML')
+    await send_with_image(message, text, reply_markup=kb_me())
