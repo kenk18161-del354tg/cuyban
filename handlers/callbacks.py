@@ -190,7 +190,7 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
     except Exception:
         pass
 
-    # 3. Editar mensaje original con resumen completo
+    # 3. Editar mensaje original con resumen completo, o enviar nuevo si no hay
     resumen = txt_group_completed(
         service_key=service,
         dato=dato,
@@ -212,7 +212,17 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
                 parse_mode='HTML',
             )
         except Exception:
-            pass
+            await bot.send_message(
+                chat_id=group_chat_id,
+                text=resumen,
+                parse_mode='HTML',
+            )
+    else:
+        await bot.send_message(
+            chat_id=group_chat_id,
+            text=resumen,
+            parse_mode='HTML',
+        )
 
     # 4. Eliminar mensaje de progreso del cliente
     if client_msg_id:
