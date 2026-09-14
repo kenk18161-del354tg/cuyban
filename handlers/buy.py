@@ -74,6 +74,27 @@ async def cb_open_buy(call: CallbackQuery) -> None:
     await call.answer()
 
 
+# ── Regresar a /buy desde el QR ──────────────────────────────────────────────
+
+@router.callback_query(lambda c: c.data == 'back_buy')
+async def cb_back_buy(call: CallbackQuery, bot: Bot) -> None:
+    async with db_engine.AsyncSessionLocal() as session:
+        user, _ = await get_or_create_user(
+            session,
+            tg_id=call.from_user.id,
+            username=call.from_user.username,
+            full_name=call.from_user.full_name,
+        )
+    text = txt_buy(user.credits)
+    # Eliminar mensaje del QR y enviar /buy de nuevo
+    try:
+        await call.message.delete()
+    except Exception:
+        pass
+    await send_with_image(call.message, text, reply_markup=kb_buy())
+    await call.answer()
+
+
 # ── Selección de paquete → mostrar QR ────────────────────────────────────────
 
 @router.callback_query(lambda c: c.data and c.data.startswith('pack_'))

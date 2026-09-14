@@ -56,14 +56,18 @@ def kb_buy() -> InlineKeyboardMarkup:
     ])
 
 
-# QR de pago — botón enviar comprobante
+# QR de pago — botón enviar comprobante + regresar
 def kb_send_voucher(payment_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(inline_keyboard=[[
-        InlineKeyboardButton(
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(
             text="📤 Enviar comprobante",
             callback_data=f"voucher_{payment_id}"
-        )
-    ]])
+        )],
+        [InlineKeyboardButton(
+            text="🔙 Regresar",
+            callback_data="back_buy"
+        )],
+    ])
 
 
 # Grupo PAGOS — aprobar/rechazar en 1 columna
