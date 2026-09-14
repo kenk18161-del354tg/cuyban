@@ -99,69 +99,75 @@ async def cb_back_buy(call: CallbackQuery, bot: Bot) -> None:
 
 @router.callback_query(F.data.startswith('pack_'))
 async def cb_select_pack(call: CallbackQuery, bot: Bot) -> None:
-    pack_key  = call.data.replace('pack_', '')
-    pack      = PACKS.get(pack_key)
-    pack_name = PACK_NAMES.get(pack_key, pack_key.upper())
+    import logging
+    log = logging.getLogger(__name__)
+    try:
+        pack_key  = call.data.replace('pack_', '')
+        pack      = PACKS.get(pack_key)
+        pack_name = PACK_NAMES.get(pack_key, pack_key.upper())
 
-    if not pack:
-        await call.answer("❌ Paquete no encontrado.", show_alert=True)
-        return
+        if not pack:
+            await call.answer("❌ Paquete no encontrado.", show_alert=True)
+            return
 
-    # Crear registro de pago en BD
-    async with db_engine.AsyncSessionLocal() as session:
-        payment = await create_payment(
-            session,
-            user_tg_id=call.from_user.id,
-            username=call.from_user.username,
-            full_name=call.from_user.full_name,
-            pack=pack_key,
+        # Crear registro de pago en BD
+        async with db_engine.AsyncSessionLocal() as session:
+            payment = await create_payment(
+                session,
+                user_tg_id=call.from_user.id,
+                username=call.from_user.username,
+                full_name=call.from_user.full_name,
+                pack=pack_key,
+                credits=pack['credits'],
+                bonus=pack['bonus'],
+                price_soles=pack['price_soles'],
+            )
+            payment_id = payment.id
+
+        text = txt_qr_payment(
+            pack_name=pack_name,
             credits=pack['credits'],
             bonus=pack['bonus'],
-            price_soles=pack['price_soles'],
+            price=pack['price_soles'],
         )
-        payment_id = payment.id
 
-    text = txt_qr_payment(
-        pack_name=pack_name,
-        credits=pack['credits'],
-        bonus=pack['bonus'],
-        price=pack['price_soles'],
-    )
+        await call.answer()
 
-    await call.answer()
+        # Leer QR en tiempo de ejecución
+        import config.settings as cfg
+        qr = cfg.QR_IMAGE
 
-    # Leer QR en tiempo de ejecución
-    import config.settings as cfg
-    qr = cfg.QR_IMAGE
+        qr_msg = None
+        if qr:
+            try:
+                qr_msg = await bot.send_photo(
+                    chat_id=call.from_user.id,
+                    photo=qr,
+                    caption=text,
+                    reply_markup=kb_send_voucher(payment_id),
+                    parse_mode='HTML',
+                )
+            except Exception as e:
+                log.warning(f"Error enviando QR foto: {e}")
 
-    qr_msg = None
-    if qr:
-        try:
-            qr_msg = await bot.send_photo(
+        if not qr_msg:
+            qr_msg = await bot.send_message(
                 chat_id=call.from_user.id,
-                photo=qr,
-                caption=text,
+                text=text,
                 reply_markup=kb_send_voucher(payment_id),
                 parse_mode='HTML',
             )
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"Error enviando QR: {e}")
 
-    if not qr_msg:
-        qr_msg = await bot.send_message(
-            chat_id=call.from_user.id,
-            text=text,
-            reply_markup=kb_send_voucher(payment_id),
-            parse_mode='HTML',
-        )
+        # Guardar ID del mensaje QR en BD
+        async with db_engine.AsyncSessionLocal() as session:
+            await update_payment(
+                session, payment_id, status='PENDIENTE',
+                qr_msg_id=qr_msg.message_id,
+            )
 
-    # Guardar ID del mensaje QR en BD
-    async with db_engine.AsyncSessionLocal() as session:
-        await update_payment(
-            session, payment_id, status='PENDIENTE',
-            qr_msg_id=qr_msg.message_id,
-        )
+    except Exception as e:
+        log.error(f"Error en cb_select_pack: {e}", exc_info=True)
+        await call.answer("❌ Error interno. Revisa los logs.", show_alert=True)
 
 
 # ── Botón "Enviar comprobante" ────────────────────────────────────────────────
