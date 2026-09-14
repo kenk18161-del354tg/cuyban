@@ -287,11 +287,13 @@ async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
         total     = payment.credits + payment.bonus
         pack_name = PACK_NAMES.get(payment.pack, payment.pack.upper())
 
-        # Guardar IDs antes de cerrar sesión
+        # Guardar IDs y datos antes de cerrar sesión
         client_id           = payment.user_tg_id
         qr_msg_id           = payment.qr_msg_id
         instructions_msg_id = payment.instructions_msg_id
         confirm_msg_id      = payment.confirm_msg_id
+        p_credits           = payment.credits
+        p_bonus             = payment.bonus
 
         await set_credits(session, client_id, total)
         await update_payment(session, payment_id, status='APROBADO')
@@ -316,15 +318,16 @@ async def cb_approve_payment(call: CallbackQuery, bot: Bot) -> None:
             except Exception:
                 pass
 
-    # Enviar solo el mensaje de PAGO APROBADO con detalle
+    # Enviar mensaje de PAGO APROBADO al cliente
     try:
         await bot.send_message(
             chat_id=client_id,
-            text=txt_payment_approved(payment.credits, payment.bonus, pack_name),
+            text=txt_payment_approved(p_credits, p_bonus, pack_name),
             parse_mode='HTML',
         )
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error notificando pago aprobado: {e}", exc_info=True)
 
 
 # ── Rechazar pago ─────────────────────────────────────────────────────────────

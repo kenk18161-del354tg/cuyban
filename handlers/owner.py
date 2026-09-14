@@ -1,4 +1,4 @@
-from aiogram import Bot, Router
+from aiogram import Bot, F, Router
 from aiogram.filters import Command
 from aiogram.types import Message
 
@@ -13,21 +13,13 @@ from texts.messages import txt_stats, txt_user_info
 
 router = Router()
 
-
-def owner_only(func):
-    """Decorador: solo el dueño puede ejecutar el comando."""
-    async def wrapper(message: Message, **kwargs):
-        if message.from_user.id != OWNER_ID:
-            return
-        await func(message, **kwargs)
-    wrapper.__name__ = func.__name__
-    return wrapper
+# Filtro reutilizable — solo el dueño
+owner_filter = F.from_user.id == OWNER_ID
 
 
 # ── /admin ────────────────────────────────────────────────────────────────────
 
-@router.message(Command('admin'))
-@owner_only
+@router.message(Command('admin'), owner_filter)
 async def cmd_admin(message: Message) -> None:
     text = (
         "👑 <b>PANEL DEL DUEÑO</b>\n\n"
@@ -52,8 +44,7 @@ async def cmd_admin(message: Message) -> None:
 
 # ── /stats ────────────────────────────────────────────────────────────────────
 
-@router.message(Command('stats'))
-@owner_only
+@router.message(Command('stats'), owner_filter)
 async def cmd_stats(message: Message) -> None:
     async with db_engine.AsyncSessionLocal() as session:
         s = await get_stats(session)
@@ -66,8 +57,7 @@ async def cmd_stats(message: Message) -> None:
 
 # ── /pedidos ──────────────────────────────────────────────────────────────────
 
-@router.message(Command('pedidos'))
-@owner_only
+@router.message(Command('pedidos'), owner_filter)
 async def cmd_pedidos(message: Message) -> None:
     async with db_engine.AsyncSessionLocal() as session:
         orders = await get_pending_orders(session)
@@ -87,8 +77,7 @@ async def cmd_pedidos(message: Message) -> None:
 
 # ── /buscar ───────────────────────────────────────────────────────────────────
 
-@router.message(Command('buscar'))
-@owner_only
+@router.message(Command('buscar'), owner_filter)
 async def cmd_buscar(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
@@ -112,8 +101,7 @@ async def cmd_buscar(message: Message) -> None:
 
 # ── /ban ──────────────────────────────────────────────────────────────────────
 
-@router.message(Command('ban'))
-@owner_only
+@router.message(Command('ban'), owner_filter)
 async def cmd_ban(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
@@ -137,8 +125,7 @@ async def cmd_ban(message: Message) -> None:
 
 # ── /unban ────────────────────────────────────────────────────────────────────
 
-@router.message(Command('unban'))
-@owner_only
+@router.message(Command('unban'), owner_filter)
 async def cmd_unban(message: Message) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
@@ -162,8 +149,7 @@ async def cmd_unban(message: Message) -> None:
 
 # ── /addbal ───────────────────────────────────────────────────────────────────
 
-@router.message(Command('addbal'))
-@owner_only
+@router.message(Command('addbal'), owner_filter)
 async def cmd_addbal(message: Message) -> None:
     parts = message.text.split()
     if len(parts) < 3:
@@ -192,8 +178,7 @@ async def cmd_addbal(message: Message) -> None:
 
 # ── /delbal ───────────────────────────────────────────────────────────────────
 
-@router.message(Command('delbal'))
-@owner_only
+@router.message(Command('delbal'), owner_filter)
 async def cmd_delbal(message: Message) -> None:
     parts = message.text.split()
     if len(parts) < 3:
@@ -222,8 +207,7 @@ async def cmd_delbal(message: Message) -> None:
 
 # ── /setprice ─────────────────────────────────────────────────────────────────
 
-@router.message(Command('setprice'))
-@owner_only
+@router.message(Command('setprice'), owner_filter)
 async def cmd_setprice(message: Message) -> None:
     parts = message.text.split()
     if len(parts) < 3:
@@ -253,8 +237,7 @@ async def cmd_setprice(message: Message) -> None:
 
 # ── /mantenimiento ────────────────────────────────────────────────────────────
 
-@router.message(Command('mantenimiento'))
-@owner_only
+@router.message(Command('mantenimiento'), owner_filter)
 async def cmd_mantenimiento(message: Message) -> None:
     import config.settings as cfg
     cfg.MAINTENANCE = not cfg.MAINTENANCE
@@ -264,8 +247,7 @@ async def cmd_mantenimiento(message: Message) -> None:
 
 # ── /broadcast ────────────────────────────────────────────────────────────────
 
-@router.message(Command('broadcast'))
-@owner_only
+@router.message(Command('broadcast'), owner_filter)
 async def cmd_broadcast(message: Message, bot: Bot) -> None:
     parts = message.text.split(maxsplit=1)
     if len(parts) < 2:
@@ -277,8 +259,8 @@ async def cmd_broadcast(message: Message, bot: Bot) -> None:
     async with db_engine.AsyncSessionLocal() as session:
         users = await get_all_users(session)
 
-    enviados  = 0
-    fallidos  = 0
+    enviados = 0
+    fallidos = 0
     for user in users:
         try:
             await bot.send_message(user.tg_id, texto)
@@ -295,8 +277,7 @@ async def cmd_broadcast(message: Message, bot: Bot) -> None:
 
 # ── /completar ────────────────────────────────────────────────────────────────
 
-@router.message(Command('completar'))
-@owner_only
+@router.message(Command('completar'), owner_filter)
 async def cmd_completar(message: Message, bot: Bot) -> None:
     parts = message.text.split()
     if len(parts) < 2:
@@ -313,15 +294,15 @@ async def cmd_completar(message: Message, bot: Bot) -> None:
         if not order:
             await message.answer(f"❌ Pedido <code>{order_id}</code> no encontrado.", parse_mode='HTML')
             return
+        user_tg_id = order.user_tg_id
         await update_order_status(session, order_id, 'COMPLETADO')
 
     await message.answer(
         f"✅ Pedido <code>{order_id}</code> marcado como COMPLETADO.", parse_mode='HTML'
     )
-    # Notificar al cliente
     try:
         await bot.send_message(
-            order.user_tg_id,
+            user_tg_id,
             f"✅ Tu pedido <code>{order_id}</code> ha sido <b>COMPLETADO</b>.",
             parse_mode='HTML'
         )
@@ -331,8 +312,7 @@ async def cmd_completar(message: Message, bot: Bot) -> None:
 
 # ── /rechazar ─────────────────────────────────────────────────────────────────
 
-@router.message(Command('rechazar'))
-@owner_only
+@router.message(Command('rechazar'), owner_filter)
 async def cmd_rechazar(message: Message, bot: Bot) -> None:
     parts = message.text.split(maxsplit=2)
     if len(parts) < 2:
@@ -351,14 +331,13 @@ async def cmd_rechazar(message: Message, bot: Bot) -> None:
         if not order:
             await message.answer(f"❌ Pedido <code>{order_id}</code> no encontrado.", parse_mode='HTML')
             return
+        user_tg_id = order.user_tg_id
         await update_order_status(session, order_id, 'CANCELADO')
 
-    await message.answer(
-        f"❌ Pedido <code>{order_id}</code> rechazado.", parse_mode='HTML'
-    )
+    await message.answer(f"❌ Pedido <code>{order_id}</code> rechazado.", parse_mode='HTML')
     try:
         await bot.send_message(
-            order.user_tg_id,
+            user_tg_id,
             f"❌ Tu pedido <code>{order_id}</code> fue <b>CANCELADO</b>.\n"
             f"📌 Motivo: {motivo}",
             parse_mode='HTML'
@@ -369,18 +348,15 @@ async def cmd_rechazar(message: Message, bot: Bot) -> None:
 
 # ── /guia ─────────────────────────────────────────────────────────────────────
 
-@router.message(Command('guia'))
-@owner_only
+@router.message(Command('guia'), owner_filter)
 async def cmd_guia(message: Message) -> None:
     text = (
         "📖 <b>GUÍA COMPLETA DEL BOT</b>\n\n"
-
         "👤 <b>COMANDOS DE USUARIOS</b>\n"
         "/start — Bienvenida y menú principal\n"
         "/cmds — Ver servicios disponibles\n"
         "/me — Ver perfil, saldo y estadísticas\n"
         "/buy — Comprar créditos\n\n"
-
         "🔐 <b>COMANDOS DE SERVICIOS</b>\n"
         "/bcp [dato] — Bloqueo BCP\n"
         "/agr [dato] — Bloqueo Ágora\n"
@@ -390,7 +366,6 @@ async def cmd_guia(message: Message) -> None:
         "/sbk [dato] — Bloqueo Scotiabank\n"
         "/yape [dato] — Bloqueo Yape\n"
         "/bloqueo [dato] — Bloqueo Número\n\n"
-
         "👑 <b>COMANDOS DEL DUEÑO</b>\n"
         "/guia — Esta guía\n"
         "/admin — Panel de administración\n"
@@ -406,14 +381,12 @@ async def cmd_guia(message: Message) -> None:
         "/broadcast [mensaje] — Mensaje a todos los usuarios\n"
         "/completar [id] — Completar pedido manualmente\n"
         "/rechazar [id] [motivo] — Rechazar pedido\n\n"
-
         "🔄 <b>FLUJO DE SOLICITUD</b>\n"
         "1. Usuario usa /bcp (u otro servicio)\n"
         "2. Llega al grupo SOLICITANDES\n"
         "3. Dueño pulsa ✅ Bloqueo confirmado\n"
         "4. Dueño envía datos del resultado en el grupo\n"
         "5. Bot envía reporte al cliente automáticamente\n\n"
-
         "💳 <b>FLUJO DE PAGO</b>\n"
         "1. Usuario usa /buy y selecciona paquete\n"
         "2. Bot muestra QR de pago\n"
@@ -422,7 +395,6 @@ async def cmd_guia(message: Message) -> None:
         "5. Llega al grupo PAGOS\n"
         "6. Dueño pulsa ✅ Aprobar pago\n"
         "7. Créditos agregados automáticamente\n\n"
-
         "⚙️ <b>VARIABLES CONFIGURABLES</b>\n"
         "BOT_NAME — Nombre del bot\n"
         "OWNER_USERNAME — @username del dueño\n"
