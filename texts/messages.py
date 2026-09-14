@@ -164,11 +164,20 @@ def txt_result_template() -> str:
 
 
 def txt_final_report(data: str) -> str:
-    # Limpiar formato Markdown del owner (asteriscos, guiones bajos)
+    # Limpiar asteriscos y guiones bajos de Markdown del owner
     clean = data.replace('*', '').replace('_', ' ').strip()
     return (
-        f"📄 <b>REPORTE FINAL</b>\n\n"
-        f"{clean}"
+        f"📄 <b>REPORTE FINAL</b>\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"🔒 <b>EQUIPO SUSPENDIDO CON NÚMERO</b>\n\n"
+        f"{clean}\n\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"✅ <b>BAJADA REALIZADA</b>\n"
+        f"📞 Compruebe llamando al número.\n"
+        f"Le dirán que la línea está\n"
+        f"<b>SUSPENDIDA</b> o <b>FUERA DE SERVICIO</b>.\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"⚡ Gracias por utilizar <b>{BOT_NAME}</b>."
     )
 
 
