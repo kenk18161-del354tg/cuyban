@@ -1,18 +1,18 @@
 PRICES = {
-    'bcp':     0,
-    'agr':     0,
-    'ibk':     0,
-    'cjaq':    0,
-    'bbva':    0,
-    'sbk':     0,
-    'yape':    0,
-    'bloqueo': 0,
+    'bcp':     5,
+    'agr':     5,
+    'ibk':     5,
+    'cjaq':    5,
+    'bbva':    5,
+    'sbk':     5,
+    'yape':    5,
+    'bloqueo': 5,
 }
 
 PACKS = {
-    'basico': {'credits': 5,  'bonus': 0, 'price_soles': 0},
-    'plus':   {'credits': 10, 'bonus': 1, 'price_soles': 0},
-    'pro':    {'credits': 20, 'bonus': 2, 'price_soles': 0},
+    'basico': {'credits': 5,  'bonus': 0, 'price_soles': 25},
+    'plus':   {'credits': 10, 'bonus': 1, 'price_soles': 45},
+    'pro':    {'credits': 20, 'bonus': 2, 'price_soles': 85},
 }
 
 SERVICE_NAMES = {
