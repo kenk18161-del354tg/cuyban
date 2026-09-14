@@ -16,10 +16,10 @@ router = Router()
 
 def owner_only(func):
     """Decorador: solo el dueño puede ejecutar el comando."""
-    async def wrapper(message: Message, *args, **kwargs):
+    async def wrapper(message: Message, **kwargs):
         if message.from_user.id != OWNER_ID:
             return
-        await func(message, *args, **kwargs)
+        await func(message, **kwargs)
     wrapper.__name__ = func.__name__
     return wrapper
 
