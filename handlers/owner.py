@@ -365,3 +365,72 @@ async def cmd_rechazar(message: Message, bot: Bot) -> None:
         )
     except Exception:
         pass
+
+
+# ── /guia ─────────────────────────────────────────────────────────────────────
+
+@router.message(Command('guia'))
+@owner_only
+async def cmd_guia(message: Message) -> None:
+    text = (
+        "📖 <b>GUÍA COMPLETA DEL BOT</b>\n\n"
+
+        "👤 <b>COMANDOS DE USUARIOS</b>\n"
+        "/start — Bienvenida y menú principal\n"
+        "/cmds — Ver servicios disponibles\n"
+        "/me — Ver perfil, saldo y estadísticas\n"
+        "/buy — Comprar créditos\n\n"
+
+        "🔐 <b>COMANDOS DE SERVICIOS</b>\n"
+        "/bcp [dato] — Bloqueo BCP\n"
+        "/agr [dato] — Bloqueo Ágora\n"
+        "/ibk [dato] — Bloqueo IBK\n"
+        "/cjaq [dato] — Bloqueo Caja Arequipa\n"
+        "/bbva [dato] — Bloqueo BBVA\n"
+        "/sbk [dato] — Bloqueo Scotiabank\n"
+        "/yape [dato] — Bloqueo Yape\n"
+        "/bloqueo [dato] — Bloqueo Número\n\n"
+
+        "👑 <b>COMANDOS DEL DUEÑO</b>\n"
+        "/guia — Esta guía\n"
+        "/admin — Panel de administración\n"
+        "/stats — Estadísticas generales\n"
+        "/pedidos — Ver pedidos pendientes\n"
+        "/buscar [id] — Buscar usuario\n"
+        "/ban [id] — Banear usuario\n"
+        "/unban [id] — Desbanear usuario\n"
+        "/addbal [id] [monto] — Agregar créditos\n"
+        "/delbal [id] [monto] — Quitar créditos\n"
+        "/setprice [servicio] [precio] — Cambiar precio\n"
+        "/mantenimiento — Activar/desactivar mantenimiento\n"
+        "/broadcast [mensaje] — Mensaje a todos los usuarios\n"
+        "/completar [id] — Completar pedido manualmente\n"
+        "/rechazar [id] [motivo] — Rechazar pedido\n\n"
+
+        "🔄 <b>FLUJO DE SOLICITUD</b>\n"
+        "1. Usuario usa /bcp (u otro servicio)\n"
+        "2. Llega al grupo SOLICITANDES\n"
+        "3. Dueño pulsa ✅ Bloqueo confirmado\n"
+        "4. Dueño envía datos del resultado en el grupo\n"
+        "5. Bot envía reporte al cliente automáticamente\n\n"
+
+        "💳 <b>FLUJO DE PAGO</b>\n"
+        "1. Usuario usa /buy y selecciona paquete\n"
+        "2. Bot muestra QR de pago\n"
+        "3. Usuario pulsa 📤 Enviar comprobante\n"
+        "4. Usuario envía foto del comprobante\n"
+        "5. Llega al grupo PAGOS\n"
+        "6. Dueño pulsa ✅ Aprobar pago\n"
+        "7. Créditos agregados automáticamente\n\n"
+
+        "⚙️ <b>VARIABLES CONFIGURABLES</b>\n"
+        "BOT_NAME — Nombre del bot\n"
+        "OWNER_USERNAME — @username del dueño\n"
+        "MAINTENANCE — true/false\n"
+        "MAIN_IMAGE — file_id imagen principal\n"
+        "QR_IMAGE — file_id imagen QR de pago\n"
+        "GROUP_ID — Grupo SOLICITANDES\n"
+        "PAYMENTS_GROUP_ID — Grupo PAGOS\n"
+        "MAX_REQUESTS_PER_DAY — Límite diario"
+    )
+    await message.answer(text, parse_mode='HTML')
