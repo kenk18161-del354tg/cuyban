@@ -41,5 +41,7 @@ async def check_membership(message: Message, bot: Bot) -> bool:
             await message.answer(txt_not_member())
             return True
     except Exception:
-        pass
+        # Si no se puede verificar, denegar acceso por seguridad
+        await message.answer(txt_not_member())
+        return True
     return False

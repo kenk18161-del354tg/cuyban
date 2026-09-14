@@ -55,6 +55,8 @@ async def run_migrations(conn: AsyncConnection) -> None:
 
     # Columnas nuevas en payments (por si la tabla ya existía)
     PAYMENTS_COLUMNS = [
+        ('photo_file_id',       'VARCHAR(256)'),
+        ('group_msg_id',        'BIGINT'),
         ('qr_msg_id',           'BIGINT'),
         ('instructions_msg_id', 'BIGINT'),
         ('confirm_msg_id',      'BIGINT'),

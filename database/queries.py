@@ -113,8 +113,8 @@ async def get_user_orders(session: AsyncSession, tg_id: int) -> list[Order]:
 # ── Stats ─────────────────────────────────────────────────────────────────────
 
 async def get_stats(session: AsyncSession) -> dict:
-    total_users  = (await session.execute(func.count(User.id).select())).scalar() or 0
-    total_orders = (await session.execute(func.count(Order.id).select())).scalar() or 0
+    total_users  = (await session.execute(select(func.count(User.id)))).scalar() or 0
+    total_orders = (await session.execute(select(func.count(Order.id)))).scalar() or 0
     completed    = (await session.execute(
         select(func.count()).where(Order.status == 'COMPLETADO')
     )).scalar() or 0

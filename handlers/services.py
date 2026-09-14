@@ -104,12 +104,25 @@ async def _handle_service(message: Message, bot: Bot, service_key: str) -> None:
     )
 
     target    = GROUP_ID or OWNER_ID
-    group_msg = await bot.send_message(
-        chat_id=target,
-        text=group_text,
-        reply_markup=kb_group_order(order.id),
-        parse_mode='HTML',
-    )
+    try:
+        group_msg = await bot.send_message(
+            chat_id=target,
+            text=group_text,
+            reply_markup=kb_group_order(order.id),
+            parse_mode='HTML',
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Error enviando al grupo: {e}", exc_info=True)
+        # Reembolsar créditos si no se pudo enviar al grupo
+        async with db_engine.AsyncSessionLocal() as session:
+            from database.queries import set_credits
+            await set_credits(session, message.from_user.id, price)
+        await message.answer(
+            "❌ Error interno al procesar tu solicitud. Tus créditos han sido devueltos.",
+            parse_mode='HTML'
+        )
+        return
 
     # Guardar IDs de mensajes en el pedido
     async with db_engine.AsyncSessionLocal() as session:

@@ -157,6 +157,7 @@ async def receive_result_data(message: Message, bot: Bot) -> None:
 
         result_text = message.text or message.caption or ''
         if not result_text.strip():
+            await message.reply("⚠️ El mensaje está vacío. Envía los datos del resultado.")
             return
 
         # Guardar datos y marcar COMPLETADO

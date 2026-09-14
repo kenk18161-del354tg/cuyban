@@ -1,5 +1,4 @@
 from aiogram.types import InlineKeyboardMarkup, Message
-from aiogram.types import InputMediaPhoto
 
 from config.media import MAIN_IMAGE
 
